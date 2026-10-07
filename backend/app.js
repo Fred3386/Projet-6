@@ -4,12 +4,15 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const userRoutes = require('./routes/user');
+const bookRoutes = require('./routes/book');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/images', express.static('images'));
 app.use('/api/auth', userRoutes);
+app.use('/api/books', bookRoutes);
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connexion à MongoDB réussie !'))

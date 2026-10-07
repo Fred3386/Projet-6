@@ -18,7 +18,9 @@ router.post('/signup', async (req, res) => {
 
         await user.save();
 
-        res.send('Inscription');
+        res.status(201).json({
+            message: 'Inscription réussie'
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
