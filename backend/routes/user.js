@@ -12,6 +12,17 @@ const router = express.Router();
 router.post('/signup', async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        if (
+            typeof email !== 'string' ||
+            !email.trim() ||
+            typeof password !== 'string' ||
+            password.trim().length === 0
+        ) {
+            return res.status(400).json({
+                error: 'L’e-mail et le mot de passe sont obligatoires.'
+            });
+        }
         // Hache le mot de passe avec bcrypt.
         const hash = await bcrypt.hash(password, 10);
         // Crée un nouvel utilisateur avec son e-mail et son mot de passe haché.

@@ -55,23 +55,120 @@ router.get('/:id', auth, async (req, res) => {
 // L'utilisateur doit être authentifié et peut envoyer une image.
 router.post('/', auth, multer[0], multer[1], async (req, res) => {
     try {
-        // Récupère les données du livre envoyées dans le champ "book"
-        // et les convertit de JSON texte en objet JavaScript.
-        const bookData = JSON.parse(req.body.book);
-        // Crée un nouveau livre en combinant les données reçues,
-        // l'identifiant de l'utilisateur connecté et l'URL de l'image optimisée.
+        // Vérifie que les informations du livre sont présentes.
+        if (!req.body || !req.body.book) {
+            return res.status(400).json({
+                error: 'Les informations du livre sont obligatoires.'
+            });
+        }
+
+        // Convertit les données JSON en objet JavaScript.
+        let bookData;
+
+        try {
+            bookData = JSON.parse(req.body.book);
+        } catch (error) {
+            return res.status(400).json({
+                error: 'Les informations du livre sont invalides.'
+            });
+        }
+
+        // Vérifie que les données reçues sont bien un objet.
+        if (
+            !bookData ||
+            typeof bookData !== 'object' ||
+            Array.isArray(bookData)
+        ) {
+            return res.status(400).json({
+                error: 'Les informations du livre sont invalides.'
+            });
+        }
+
+        // Stocke toutes les erreurs détectées.
+        const errors = {};
+
+        // Vérifie le titre.
+        if (
+            typeof bookData.title !== 'string' ||
+            !bookData.title.trim()
+        ) {
+            errors.title = 'Le titre du livre est obligatoire.';
+        }
+
+        // Vérifie l'auteur.
+        if (
+            typeof bookData.author !== 'string' ||
+            !bookData.author.trim()
+        ) {
+            errors.author = 'Le nom de l’auteur est obligatoire.';
+        }
+
+        // Vérifie l'année de publication.
+        let year;
+
+        if (
+            !Object.prototype.hasOwnProperty.call(bookData, 'year') ||
+            bookData.year === null ||
+            String(bookData.year).trim() === ''
+        ) {
+            errors.year = 'L’année de publication est obligatoire.';
+        } else {
+            year = Number(bookData.year);
+
+            if (
+                !Number.isInteger(year) ||
+                year < 1 ||
+                year > new Date().getFullYear()
+            ) {
+                errors.year = 'L’année de publication est invalide.';
+            }
+        }
+
+        // Vérifie le genre.
+        if (
+            typeof bookData.genre !== 'string' ||
+            !bookData.genre.trim()
+        ) {
+            errors.genre = 'Le genre du livre est obligatoire.';
+        }
+
+        // Vérifie l'image.
+        if (!req.file) {
+            errors.image = 'Vous devez ajouter une image du livre.';
+        }
+
+        // Renvoie toutes les erreurs dans une seule réponse.
+        if (Object.keys(errors).length > 0) {
+            return res.status(400).json({ errors });
+        }
+
+        // Crée le livre avec les données vérifiées.
         const book = new Book({
             ...bookData,
+            title: bookData.title.trim(),
+            author: bookData.author.trim(),
+            year,
+            genre: bookData.genre.trim(),
             userId: req.auth.userId,
             imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
         });
-        // Enregistre le nouveau livre dans MongoDB.
+
+        // Enregistre le livre dans la base de données.
         await book.save();
-        // Confirme la création du livre avec le statut HTTP 201.
-        res.status(201).json({ message: 'Livre créé !' });
+
+        return res.status(201).json({
+            message: 'Livre créé !'
+        });
+
     } catch (error) {
-        // Renvoie une erreur HTTP 400 si les données ne peuvent pas être traitées.
-        res.status(400).json({ error: error.message });
+        console.error(
+            'Erreur lors de la création du livre :',
+            error
+        );
+
+        return res.status(400).json({
+            error: 'Une erreur est survenue lors de la création du livre.'
+        });
     }
 });
 
